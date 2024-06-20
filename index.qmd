@@ -1,0 +1,96 @@
+---
+title: "tablero felidos"
+format: 
+  dashboard:
+    orientation: columns
+---
+```{r}
+#| label: carga-paquetes
+#| message: false
+#| warning: false
+
+library(tidyverse)
+library(plotly)
+library(DT)
+library(sf)
+library(leaflet)
+library(leaflet.extras)
+library(leafem)
+```
+
+```{r}
+#| label: carga-datos
+#| message: false
+#| warning: false
+
+felidos <-
+  st_read("felidos.csv",
+           options = c(
+      "X_POSSIBLE_NAMES=decimalLongitude", # columna de longitud decimal
+      "Y_POSSIBLE_NAMES=decimalLatitude"   # columna de latitud decimal
+          ), quiet = TRUE
+      )
+
+st_crs(felidos) <- 4326
+```
+
+# Tabla y graficos
+
+## Column {width=55%}
+
+```{r}
+#| label: tabla
+#| message: false
+#| warning: false
+
+felidos |> 
+  st_drop_geometry() |>
+  select(species, decimalLongitude, decimalLatitude, stateProvince) |>
+  arrange(species) |>
+  datatable(
+    colnames = c("especie", "Longitud", "Latitud", "Provincia"),
+    rownames = FALSE
+  )
+```
+
+## Column {width=55%}
+
+```{r}
+#| label: cantidad_de_registro_por_especie
+#| message: false
+#| warning: false
+
+grafico_ggplot2 <-
+felidos |>
+  st_drop_geometry() |>
+  group_by(species) |>
+  summarise(n = n()) |>
+  ggplot(aes(x = species, y = n)) +
+  geom_col()
+
+ggplotly(grafico_ggplot2) |> config(locale ="es")
+```
+
+# Mapa
+
+```{r}
+#| label: mapa
+#| message: false
+#| warning: false
+
+leaflet() |>
+  addTiles(group = "OSM") |>
+  addProviderTiles(provider = providers$Esri.WorldImagery, group = "Imagenes Satelitales") |>
+  addCircleMarkers(data = felidos, fillColor = "red", color = "red", radius = 4, group = "Felidos") |>
+  addLayersControl(baseGroups = c("OSM", "Imagenes Satelitales"), overlayGroups = c("Felidos")) |>
+  addResetMapButton() |>
+  addSearchOSM() |>
+  addMouseCoordinates() |>
+  addMiniMap(position = "bottomright") |>
+  addFullscreenControl()
+
+```
+
+
+
+
